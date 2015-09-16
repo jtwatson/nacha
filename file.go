@@ -178,6 +178,17 @@ func (nf *NachaFile) Write(w io.Writer) error {
 	return nil
 }
 
+func (nf *NachaFile) WriteFile(path string) error {
+
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	nf.Write(f)
+	return nil
+}
+
 func LoadNachaFile(name string) (*NachaFile, error) {
 	file, err := os.Open(name)
 	if err != nil {
