@@ -8,6 +8,8 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"strconv"
+	"time"
 )
 
 type NachaFile struct {
@@ -89,6 +91,96 @@ func (nf *NachaFile) setControlTotals() {
 	}
 	strEHash := fmt.Sprintf("%010d", entryHash)
 	copy(nf.control[0][21:], strEHash[len(strEHash)-10:])
+}
+
+func (nf *NachaFile) BatchCount() int64 {
+	nf.setControlTotals()
+	if len(nf.control) == 0 || len(nf.control[0]) != 94 {
+		return 0
+	}
+	bCount, err := strconv.ParseInt(string(nf.control[0][1:7]), 10, 64)
+	if err != nil {
+		return 0
+	}
+	return bCount
+}
+
+func (nf *NachaFile) EntryCount() int64 {
+	nf.setControlTotals()
+	if len(nf.control) == 0 || len(nf.control[0]) != 94 {
+		return 0
+	}
+	bCount, err := strconv.ParseInt(string(nf.control[0][13:21]), 10, 64)
+	if err != nil {
+		return 0
+	}
+	return bCount
+}
+
+func (nf *NachaFile) DebitTotal() float64 {
+	nf.setControlTotals()
+	if len(nf.control) == 0 || len(nf.control[0]) != 94 {
+		return 0.00
+	}
+	bCount, err := strconv.ParseFloat(string(nf.control[0][31:43]), 64)
+	if err != nil {
+		return 0.00
+	}
+	return bCount / 100 * -1
+}
+
+func (nf *NachaFile) CreditTotal() float64 {
+	nf.setControlTotals()
+	if len(nf.control) == 0 || len(nf.control[0]) != 94 {
+		return 0.00
+	}
+	bCount, err := strconv.ParseFloat(string(nf.control[0][43:55]), 64)
+	if err != nil {
+		return 0.00
+	}
+	return bCount / 100
+}
+
+func (nf *NachaFile) BlockCount() int64 {
+	nf.setControlTotals()
+	if len(nf.control) == 0 || len(nf.control[0]) != 94 {
+		return 0
+	}
+	bCount, err := strconv.ParseInt(string(nf.control[0][7:13]), 10, 64)
+	if err != nil {
+		return 0
+	}
+	return bCount
+}
+
+func (nf *NachaFile) Hash() string {
+	nf.setControlTotals()
+	if len(nf.control) == 0 || len(nf.control[0]) != 94 {
+		return ""
+	}
+	return string(nf.control[0][21:31])
+}
+
+func (nf *NachaFile) FileCreationDate() string {
+	if len(nf.header) != 94 {
+		return ""
+	}
+	return string(nf.header[23:29])
+}
+
+func (nf *NachaFile) FileCreationTime() string {
+	if len(nf.header) != 94 {
+		return ""
+	}
+	return string(nf.header[29:33])
+}
+
+func (nf *NachaFile) FileCreationTimeStamp() (time.Time, error) {
+	t, err := time.Parse("060102 1504", nf.FileCreationDate()+" "+nf.FileCreationTime())
+	if err != nil {
+		return time.Time{}, err
+	}
+	return t, nil
 }
 
 func (nf *NachaFile) Write(w io.Writer) error {
