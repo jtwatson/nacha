@@ -161,6 +161,13 @@ func (nf *NachaFile) Hash() string {
 	return string(nf.control[0][21:31])
 }
 
+func (nf *NachaFile) FileId() string {
+	if len(nf.header) != 94 {
+		return ""
+	}
+	return string(nf.header[33:34])
+}
+
 func (nf *NachaFile) FileCreationDate() string {
 	if len(nf.header) != 94 {
 		return ""
