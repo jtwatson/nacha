@@ -122,11 +122,11 @@ func (nf *NachaFile) DebitTotal() float64 {
 	if len(nf.control) == 0 || len(nf.control[0]) != 94 {
 		return 0.00
 	}
-	bCount, err := strconv.ParseFloat(string(nf.control[0][31:43]), 64)
+	bCount, err := strconv.ParseFloat(string(nf.control[0][31:41])+"."+string(nf.control[0][41:43]), 64)
 	if err != nil {
 		return 0.00
 	}
-	return bCount / 100 * -1
+	return bCount
 }
 
 func (nf *NachaFile) CreditTotal() float64 {
