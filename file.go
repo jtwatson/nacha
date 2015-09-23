@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-type NachaFile struct {
+type File struct {
 	name     string
 	header   []byte
 	Batches  []*Batch
@@ -21,27 +21,27 @@ type NachaFile struct {
 	renumber bool
 }
 
-func (nf *NachaFile) DisableCrlf() {
+func (nf *File) DisableCrlf() {
 	nf.crlf = false
 }
 
-func (nf *NachaFile) EnableCrlf() {
+func (nf *File) EnableCrlf() {
 	nf.crlf = true
 }
 
-func (nf *NachaFile) DisableBatchRenumber() {
+func (nf *File) DisableBatchRenumber() {
 	nf.renumber = false
 }
 
-func (nf *NachaFile) EnableBatchRenumber() {
+func (nf *File) EnableBatchRenumber() {
 	nf.renumber = true
 }
 
-func (nf *NachaFile) Name() string {
+func (nf *File) Name() string {
 	return nf.name
 }
 
-func (nf *NachaFile) setControlTotals() {
+func (nf *File) setControlTotals() {
 	bCount := 0
 	eCount := 0
 	debitTot := 0
@@ -93,7 +93,7 @@ func (nf *NachaFile) setControlTotals() {
 	copy(nf.control[0][21:], strEHash[len(strEHash)-10:])
 }
 
-func (nf *NachaFile) BatchCount() int64 {
+func (nf *File) BatchCount() int64 {
 	nf.setControlTotals()
 	if len(nf.control) == 0 || len(nf.control[0]) != 94 {
 		return 0
@@ -105,7 +105,7 @@ func (nf *NachaFile) BatchCount() int64 {
 	return bCount
 }
 
-func (nf *NachaFile) EntryCount() int64 {
+func (nf *File) EntryCount() int64 {
 	nf.setControlTotals()
 	if len(nf.control) == 0 || len(nf.control[0]) != 94 {
 		return 0
@@ -117,7 +117,7 @@ func (nf *NachaFile) EntryCount() int64 {
 	return bCount
 }
 
-func (nf *NachaFile) DebitTotal() float64 {
+func (nf *File) DebitTotal() float64 {
 	nf.setControlTotals()
 	if len(nf.control) == 0 || len(nf.control[0]) != 94 {
 		return 0.00
@@ -129,7 +129,7 @@ func (nf *NachaFile) DebitTotal() float64 {
 	return bCount
 }
 
-func (nf *NachaFile) CreditTotal() float64 {
+func (nf *File) CreditTotal() float64 {
 	nf.setControlTotals()
 	if len(nf.control) == 0 || len(nf.control[0]) != 94 {
 		return 0.00
@@ -141,7 +141,7 @@ func (nf *NachaFile) CreditTotal() float64 {
 	return bCount / 100
 }
 
-func (nf *NachaFile) BlockCount() int64 {
+func (nf *File) BlockCount() int64 {
 	nf.setControlTotals()
 	if len(nf.control) == 0 || len(nf.control[0]) != 94 {
 		return 0
@@ -153,7 +153,7 @@ func (nf *NachaFile) BlockCount() int64 {
 	return bCount
 }
 
-func (nf *NachaFile) Hash() string {
+func (nf *File) Hash() string {
 	nf.setControlTotals()
 	if len(nf.control) == 0 || len(nf.control[0]) != 94 {
 		return ""
@@ -161,28 +161,28 @@ func (nf *NachaFile) Hash() string {
 	return string(nf.control[0][21:31])
 }
 
-func (nf *NachaFile) FileId() string {
+func (nf *File) FileId() string {
 	if len(nf.header) != 94 {
 		return ""
 	}
 	return string(nf.header[33:34])
 }
 
-func (nf *NachaFile) FileCreationDate() string {
+func (nf *File) FileCreationDate() string {
 	if len(nf.header) != 94 {
 		return ""
 	}
 	return string(nf.header[23:29])
 }
 
-func (nf *NachaFile) FileCreationTime() string {
+func (nf *File) FileCreationTime() string {
 	if len(nf.header) != 94 {
 		return ""
 	}
 	return string(nf.header[29:33])
 }
 
-func (nf *NachaFile) FileCreationTimeStamp() (time.Time, error) {
+func (nf *File) FileCreationTimeStamp() (time.Time, error) {
 	t, err := time.Parse("060102 1504", nf.FileCreationDate()+" "+nf.FileCreationTime())
 	if err != nil {
 		return time.Time{}, err
@@ -190,7 +190,7 @@ func (nf *NachaFile) FileCreationTimeStamp() (time.Time, error) {
 	return t, nil
 }
 
-func (nf *NachaFile) Write(w io.Writer) error {
+func (nf *File) Write(w io.Writer) error {
 	var batchNum int
 	var crlf = "\r\n"
 
@@ -277,7 +277,7 @@ func (nf *NachaFile) Write(w io.Writer) error {
 	return nil
 }
 
-func (nf *NachaFile) WriteFile(path string) error {
+func (nf *File) WriteFile(path string) error {
 
 	f, err := os.Create(path)
 	if err != nil {
@@ -288,18 +288,22 @@ func (nf *NachaFile) WriteFile(path string) error {
 	return nil
 }
 
-func LoadNachaFile(name string) (*NachaFile, error) {
+func NewFromFile(name string) (*File, error) {
 	file, err := os.Open(name)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	r := bufio.NewScanner(file)
-	r.Split(splitScanAt(94))
+	return New(file)
+}
 
-	nf := &NachaFile{
-		name:    name,
+func New(r io.Reader) (*File, error) {
+
+	br := bufio.NewScanner(r)
+	br.Split(splitScanAt(94))
+
+	nf := &File{
 		control: make([][]byte, 0),
 	}
 
@@ -308,8 +312,8 @@ func LoadNachaFile(name string) (*NachaFile, error) {
 	var curBatch *Batch
 	var curEntry *Entry
 
-	for r.Scan() {
-		d := r.Bytes()
+	for br.Scan() {
+		d := br.Bytes()
 		data := make([]byte, len(d))
 		copy(data, d)
 
@@ -359,7 +363,7 @@ func LoadNachaFile(name string) (*NachaFile, error) {
 			return nil, errors.New(fmt.Sprintf("Invalid Nacha Record Type Code. Record: %q", data))
 		}
 	}
-	if err := r.Err(); err != nil {
+	if err := br.Err(); err != nil {
 		return nil, err
 	}
 	return nf, nil
