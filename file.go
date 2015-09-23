@@ -13,7 +13,6 @@ import (
 )
 
 type File struct {
-	name     string
 	header   []byte
 	Batches  []*Batch
 	control  [][]byte
@@ -35,10 +34,6 @@ func (nf *File) DisableBatchRenumber() {
 
 func (nf *File) EnableBatchRenumber() {
 	nf.renumber = true
-}
-
-func (nf *File) Name() string {
-	return nf.name
 }
 
 func (nf *File) setControlTotals() {
